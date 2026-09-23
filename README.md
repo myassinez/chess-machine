@@ -95,6 +95,7 @@ Photos, video, and one dev screenshot from the original build.
 *January 2024 — an early version of the movement-diff logic (`tajriba.py`) running in VS Code, comparing two board photos to isolate the moved square.*
 
 ![Gripper mid-move](media/20240501_184008.gif)
+
 *May 1, 2024 — the gripper picking up a piece during a live run.*
 
 ---
