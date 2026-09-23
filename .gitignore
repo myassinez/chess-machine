@@ -1,0 +1,25 @@
+﻿# Chess Machine
+
+# Generated files (runtime camera drop folder)
+server_camera/public/
+
+# SSL certs (generate locally, never commit)
+server_camera/key.pem
+server_camera/cert.pem
+
+# Stockfish binary
+*.exe
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node
+server_camera/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

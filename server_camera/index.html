@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Chess Machine</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: #111;
+      color: #eee;
+      font-family: sans-serif;
+      padding: 24px;
+      padding-top: max(24px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+    h2 { font-size: 22px; letter-spacing: 1px; }
+    #takeBtn {
+      padding: 18px 36px;
+      font-size: 20px;
+      border: none;
+      border-radius: 12px;
+      background: #2e7d32;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #takeBtn:active { background: #1b5e20; }
+    #takeBtn:disabled { background: #444; cursor: default; }
+    #status {
+      font-size: 14px;
+      color: #aaa;
+      min-height: 20px;
+      text-align: center;
+    }
+    #log {
+      width: 100%;
+      max-width: 340px;
+      font-size: 13px;
+      color: #ccc;
+      border-top: 1px solid #333;
+      padding-top: 12px;
+    }
+    .log-entry { padding: 4px 0; border-bottom: 1px solid #222; }
+    #connDot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #555;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    #connDot.on  { background: #4caf50; }
+    #connDot.off { background: #f44336; }
+  </style>
+</head>
+<body>
+  <h2>♟ Chess Machine</h2>
+
+  <div id="status"><span id="connDot"></span><span id="connText">Connecting…</span></div>
+
+  <button id="takeBtn" disabled>Take Picture</button>
+
+  <div id="log"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+  <script>
+    const takeBtn  = document.getElementById('takeBtn');
+    const connDot  = document.getElementById('connDot');
+    const connText = document.getElementById('connText');
+    const logEl    = document.getElementById('log');
+    let moveIndex  = 1;
+
+    const socket = io({ secure: true });
+
+    function setConn(on) {
+      connDot.className = on ? 'on' : 'off';
+      connText.textContent = on ? 'Connected' : 'Disconnected';
+      takeBtn.disabled = !on;
+    }
+
+    function addLog(text) {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.textContent = text;
+      logEl.prepend(div);
+    }
+
+    socket.on('connect',    () => setConn(true));
+    socket.on('disconnect', () => setConn(false));
+
+    // Server confirms image was saved — chess_bot.py picks it up via watchdog
+    socket.on('pictureSaved', ({ fileName }) => {
+      addLog('Move ' + moveIndex++ + ': photo sent (' + fileName + ')');
+      takeBtn.disabled = false;
+      takeBtn.textContent = 'Take Picture';
+    });
+
+    takeBtn.addEventListener('click', () => {
+      takeBtn.disabled = true;
+      takeBtn.textContent = 'Capturing…';
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          const track        = stream.getVideoTracks()[0];
+          const imageCapture = new ImageCapture(track);
+          return imageCapture.takePhoto().then(blob => {
+            stream.getTracks().forEach(t => t.stop());
+            return blob;
+          });
+        })
+        .then(blob => new Promise((res) => {
+          const reader = new FileReader();
+          reader.onloadend = () => res(reader.result);
+          reader.readAsDataURL(blob);
+        }))
+        .then(imageData => {
+          socket.emit('takePicture', { imageData });
+        })
+        .catch(err => {
+          console.error(err);
+          addLog('Error: ' + err.message);
+          takeBtn.disabled = false;
+          takeBtn.textContent = 'Take Picture';
+        });
+    });
+  </script>
+</body>
+</html>
